@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GTA Algeria v60.0 - Rockstar Open-World Edition</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; -webkit-user-select: none; }
+        body { overflow: hidden; background: #000; color: #fff; touch-action: none; }
+
+        /* شاشة البداية */
+        #intro-screen {
+            position: fixed; inset: 0; background: radial-gradient(circle at center, #06101e 0%, #000 100%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1000; transition: opacity 1.2s ease;
+        }
+        #logo-xmo {
+            font-size: 92px; font-weight: 900; letter-spacing: 18px; color: #fff;
+            text-shadow: 0 0 40px #00f5d4, 0 0 90px #00b894;
+            opacity: 0; animation: logoReveal 2.4s forwards;
+        }
+        #dev-credit {
+            font-size: 20px; font-weight: bold; color: #f1c40f; margin-top: 12px;
+            letter-spacing: 3px; opacity: 0; animation: creditReveal 1.8s 1.2s forwards;
+        }
+        .dz-flag-bar {
+            width: 220px; height: 6px; margin-top: 14px; border-radius: 4px;
+            background: linear-gradient(90deg, #006233 33%, #ffffff 33%, #ffffff 66%, #d21034 66%);
+            opacity: 0; animation: creditReveal 1.6s 1.5s forwards;
+        }
+        @keyframes logoReveal { 0% { opacity: 0; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; } }
+        @keyframes creditReveal { 0% { opacity: 0; transform: translateY(15px); } 40% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+
+        /* القائمة الرئيسية */
+        #main-menu {
+            position: fixed; inset: 0; background: linear-gradient(145deg, rgba(4,8,16,0.97), rgba(0,75,38,0.92));
+            backdrop-filter: blur(20px); display: none; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 900; text-align: center; padding: 20px;
+        }
+        #main-menu h1 { font-size: 46px; font-weight: 900; margin-bottom: 8px; text-shadow: 0 6px 25px rgba(0,0,0,0.9); }
+        #main-menu h1 span { color: #00f5d4; }
+        .subtitle { font-size: 14px; color: #dfe6e9; margin-bottom: 22px; max-width: 600px; line-height: 1.6; }
+
+        .wardrobe-container {
+            background: rgba(8, 14, 24, 0.92); border: 1.5px solid #00f5d4;
+            border-radius: 18px; padding: 16px 24px; margin-bottom: 24px;
+            max-width: 480px; width: 100%; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        }
+        .wardrobe-title { font-size: 16px; color: #f1c40f; font-weight: bold; margin-bottom: 12px; }
+        .custom-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; }
+        .color-options { display: flex; gap: 10px; }
+        .color-dot {
+            width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.4); transition: 0.2s;
+        }
+        .color-dot.active { transform: scale(1.2); border-color: #fff; box-shadow: 0 0 14px #00f5d4; }
+
+        .menu-btn {
+            background: linear-gradient(90deg, #006233, #00b894); color: #fff;
+            border: 2px solid #00f5d4; padding: 15px 48px; font-size: 20px;
+            font-weight: bold; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0, 245, 212, 0.4);
+        }
+
+        /* واجهة اللعب المتناسقة بدون تداخل */
+        #top-bar {
+            position: fixed; top: 10px; left: 10px; right: 10px;
+            display: none; justify-content: space-between; align-items: flex-start;
+            pointer-events: none; z-index: 30; gap: 8px;
+        }
+        #radar-wrap {
+            background: rgba(5, 9, 17, 0.9); border: 2px solid #00f5d4;
+            border-radius: 14px; padding: 5px; text-align: center; flex-shrink: 0;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+        }
+        #radar { display: block; border-radius: 9px; background: #07101c; width: 115px; height: 75px; }
+        .radar-label { font-size: 9px; color: #00f5d4; margin-top: 3px; font-weight: bold; }
+
+        #mission-box {
+            background: rgba(8, 13, 22, 0.92); border: 1.5px solid #f1c40f;
+            padding: 8px 14px; border-radius: 16px; text-align: center;
+            max-width: 45%; box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+        }
+        #mission-title { font-size: 10px; color: #f1c40f; font-weight: bold; }
+        #mission-desc { font-size: 12px; color: #fff; margin-top: 2px; line-height: 1.3; }
+
+        #hud {
+            background: rgba(5, 9, 17, 0.9); padding: 8px 12px; border-radius: 14px;
+            border-right: 4px solid #00f5d4; text-align: right; font-size: 11px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.7); flex-shrink: 0;
+        }
+        .hud-row { margin-bottom: 3px; }
+        .highlight { color: #f1c40f; font-weight: bold; }
+        .money { color: #00f5d4; font-weight: bold; font-size: 12px; }
+
+        /* أزرار التحكم (عصا تحكم PlayStation + أزرار الأكشن) */
+        #touch-controls {
+            position: fixed; inset: 0; pointer-events: none; display: none; z-index: 50;
+        }
+        #joystick-zone {
+            position: absolute; bottom: 25px; left: 25px; width: 140px; height: 140px;
+            background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(0, 245, 212, 0.5);
+            border-radius: 50%; pointer-events: auto; backdrop-filter: blur(4px);
+            display: flex; justify-content: center; align-items: center;
+        }
+        #joystick-knob {
+            width: 54px; height: 54px; background: radial-gradient(circle, #00f5d4, #008060);
+            border: 2px solid #fff; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,245,212,0.6);
+            position: relative; transition: transform 0.05s linear;
+        }
+
+        /* أزرار بلايستيشن دائرية احترافية */
+        .ps-pad {
+            position: absolute; bottom: 25px; right: 25px; width: 165px; height: 165px; pointer-events: auto;
+        }
+        .ps-circle-btn {
+            position: absolute; width: 54px; height: 54px; border-radius: 50%;
+            background: rgba(10, 15, 28, 0.88); backdrop-filter: blur(6px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            font-weight: bold; box-shadow: 0 6px 18px rgba(0,0,0,0.8);
+            active-transform: scale(0.92);
+        }
+        .ps-symbol { font-size: 18px; line-height: 1; }
+        .ps-label { font-size: 9px; color: #dfe6e9; margin-top: 2px; }
+
+        #btn-triangle { top: 0; left: 55px; border: 2.5px solid #2ecc71; color: #2ecc71; }
+        #btn-cross { bottom: 0; left: 55px; border: 2.5px solid #3498db; color: #3498db; }
+        #btn-square { top: 55px; left: 0; border: 2.5px solid #e84393; color: #e84393; }
+        #btn-circle { top: 55px; right: 0; border: 2.5px solid #e74c3c; color: #e74c3c; }
+
+        #dialogue-box {
+            position: fixed; bottom: 195px; left: 50%; transform: translateX(-50%);
+            width: 92%; max-width: 580px; background: rgba(6, 10, 18, 0.96);
+            backdrop-filter: blur(15px); border: 2px solid #00f5d4; border-radius: 16px;
+            padding: 15px 20px; display: none; z-index: 60; box-shadow: 0 15px 40px rgba(0,0,0,0.9);
+        }
+        #npc-title { color: #f1c40f; font-weight: bold; font-size: 15px; margin-bottom: 5px; }
+        #npc-msg { font-size: 13px; line-height: 1.5; color: #fff; }
+        .close-hint { font-size: 10px; color: #00f5d4; margin-top: 6px; text-align: left; }
+
+        #prompt {
+            position: fixed; top: 44%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.88); color: #f1c40f; padding: 8px 18px;
+            border-radius: 25px; font-size: 12px; font-weight: bold;
+            display: none; border: 1.5px solid #f1c40f; z-index: 40;
+        }
+
+        #toast {
+            position: fixed; top: 22%; left: 50%; transform: translate(-50%, -50%);
+            background: linear-gradient(90deg, #006233, #00b894); color: #fff;
+            padding: 12px 24px; border-radius: 14px; font-size: 14px; font-weight: bold;
+            display: none; z-index: 70; border: 2px solid #fff; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.85);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen">
+        <div id="logo-xmo">XMO</div>
+        <div id="dev-credit">by dev sami — الجزائر 🇩🇿</div>
+        <div class="dz-flag-bar"></div>
+    </div>
+
+    <div id="main-menu">
+        <h1>GTA <span>Algeria</span> v60.0</h1>
+        <p class="subtitle">عالم مفتوح ضخم بتصميم Rockstar، شخصيات بمفاصل وحركة مشي واقعية، سيارة Geely Coolray كاملة التفاصيل، وتحكم PlayStation احترافي!</p>
+        
+        <div class="wardrobe-container">
+            <div class="wardrobe-title">👔 تخصيص مظهر الشخصية</div>
+            <div class="custom-group">
+                <span>لون القميص:</span>
+                <div class="color-options">
+                    <div class="color-dot active" style="background: #006233;" onclick="setPlayerShirt(0x006233, this)"></div>
+                    <div class="color-dot" style="background: #d63031;" onclick="setPlayerShirt(0xd63031, this)"></div>
+                    <div class="color-dot" style="background: #0984e3;" onclick="setPlayerShirt(0x0984e3, this)"></div>
+                    <div class="color-dot" style="background: #f5f6fa;" onclick="setPlayerShirt(0xf5f6fa, this)"></div>
+                </div>
+            </div>
+            <div class="custom-group">
+                <span>لون السروال:</span>
+                <div class="color-options">
+                    <div class="color-dot active" style="background: #1e272e;" onclick="setPlayerPants(0x1e272e, this)"></div>
+                    <div class="color-dot" style="background: #2c3e50;" onclick="setPlayerPants(0x2c3e50, this)"></div>
+                    <div class="color-dot" style="background: #576574;" onclick="setPlayerPants(0x576574, this)"></div>
+                </div>
+            </div>
+        </div>
+
+        <button class="menu-btn" onclick="startGame()">▶ دخول العالم المفتوح</button>
+    </div>
+
+    <!-- الشريط العلوي المتناسق -->
+    <div id="top-bar">
+        <div id="radar-wrap">
+            <canvas id="radar" width="115" height="75"></canvas>
+            <div class="radar-label" id="zone-radar">الحي السكني</div>
+        </div>
+
+        <div id="mission-box">
+            <div id="mission-title">الفصل 1 / 14: المسجد المبارك</div>
+            <div id="mission-desc">توجه إلى الإمام لأداء الصلاة [□]</div>
+        </div>
+
+        <div id="hud">
+            <div class="hud-row">المنطقة: <span id="city-name" class="highlight">الحومة</span></div>
+            <div class="hud-row">الرصيد: <span id="money" class="money">6,000,000</span> دج</div>
+            <div class="hud-row">السرعة: <span id="speed-hud" class="highlight">0</span> كم/س</div>
+        </div>
+    </div>
+
+    <!-- أزرار التحكم (عصا تحكم + أزرار PlayStation) -->
+    <div id="touch-controls">
+        <div id="joystick-zone">
+            <div id="joystick-knob"></div>
+        </div>
+
+        <div class="ps-pad">
+            <div class="ps-circle-btn" id="btn-triangle" onclick="playHorn()">
+                <span class="ps-symbol">△</span>
+                <span class="ps-label">كلاكسون</span>
+            </div>
+            <div class="ps-circle-btn" id="btn-square" onclick="interactNPC()">
+                <span class="ps-symbol">□</span>
+                <span class="ps-label">هدرة</span>
+            </div>
+            <div class="ps-circle-btn" id="btn-circle" onclick="toggleNitro()">
+                <span class="ps-symbol">○</span>
+                <span class="ps-label">تيربو</span>
+            </div>
+            <div class="ps-circle-btn" id="btn-cross" onclick="toggleCar()">
+                <span class="ps-symbol">✕</span>
+                <span class="ps-label">ركوب</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="prompt">اضغط للتفاعل</div>
+    <div id="toast">تمت المهمة بنجاح!</div>
+
+    <div id="dialogue-box" onclick="closeDialogue()">
+        <div id="npc-title">الحوار</div>
+        <div id="npc-msg">مرحباً بك!</div>
+        <div class="close-hint">اضغط [□] أو انقر هنا للمتابعة</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+let selectedShirtColor = 0x006233;
+let selectedPantsColor = 0x1e272e;
+const playerMaterials = { shirt: null, pants: null };
+
+function setPlayerShirt(colorHex, el) {
+    selectedShirtColor = colorHex;
+    document.querySelectorAll('.wardrobe-container .color-options')[0].querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    el.classList.add('active');
+    if (playerMaterials.shirt) playerMaterials.shirt.color.setHex(colorHex);
+}
+function setPlayerPants(colorHex, el) {
+    selectedPantsColor = colorHex;
+    document.querySelectorAll('.wardrobe-container .color-options')[1].querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    el.classList.add('active');
+    if (playerMaterials.pants) playerMaterials.pants.color.setHex(colorHex);
+}
+
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const intro = document.getElementById('intro-screen');
+        intro.style.opacity = '0';
+        setTimeout(() => {
+            intro.style.display = 'none';
+            document.getElementById('main-menu').style.display = 'flex';
+        }, 900);
+    }, 2600);
+});
+
+let gameStarted = false;
+let audioCtx = null;
+
+function startGame() {
+    document.getElementById('main-menu').style.display = 'none';
+    document.getElementById('top-bar').style.display = 'flex';
+    document.getElementById('touch-controls').style.display = 'block';
+    gameStarted = true;
+    initAudio();
+}
+
+function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playSound(freq, type = 'sine', dur = 0.12) {
+    if (!audioCtx) return;
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.value = freq; gain.gain.value = 0.08;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + dur);
+    } catch(e) {}
+}
+function playHorn() { playSound(340, 'sawtooth', 0.22); }
+
+// --- إعداد محرك Three.js ---
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4500);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.25;
+document.body.appendChild(renderer.domElement);
+
+scene.background = new THREE.Color(0x4facfe);
+scene.fog = new THREE.FogExp2(0x87ceeb, 0.00045);
+
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x2d3436, 0.85);
+scene.add(hemiLight);
+
+const sun = new THREE.DirectionalLight(0xfff5e4, 1.6);
+sun.position.set(500, 800, 400);
+sun.castShadow = true;
+sun.shadow.mapSize.width = 2048;
+sun.shadow.mapSize.height = 2048;
+sun.shadow.camera.near = 10;
+sun.shadow.camera.far = 3000;
+const d = 1200;
+sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
+sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
+scene.add(sun);
+
+// --- بناء الخريطة الضخمة (4000x4000) ---
+// البحر الساحلي
+const sea = new THREE.Mesh(
+    new THREE.PlaneGeometry(5000, 3000),
+    new THREE.MeshStandardMaterial({ color: 0x0984e3, roughness: 0.1, metalness: 0.75 })
+);
+sea.rotation.x = -Math.PI / 2; sea.position.set(0, -0.5, -1650); scene.add(sea);
+
+// الشاطئ الرملي الذهبي
+const beach = new THREE.Mesh(
+    new THREE.PlaneGeometry(5000, 180),
+    new THREE.MeshStandardMaterial({ color: 0xf6e58d, roughness: 0.9 })
+);
+beach.rotation.x = -Math.PI / 2; beach.position.set(0, -0.1, -120); scene.add(beach);
+
+// الأرض الخضراء الضخمة
+const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(5000, 3500),
+    new THREE.MeshStandardMaterial({ color: 0x2ecc71, roughness: 0.85 })
+);
+ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, 1700); ground.receiveShadow = true; scene.add(ground);
+
+// شبكة الطرقات الضخمة (طريق رئيسي مزدوج + طرق فرعية)
+function createRoad(x, z, w, l, isHorizontal = true) {
+    const roadMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, l),
+        new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.6 })
+    );
+    roadMesh.rotation.x = -Math.PI / 2;
+    roadMesh.position.set(x, 0.04, z);
+    roadMesh.receiveShadow = true;
+    scene.add(roadMesh);
+
+    // الخطوط البيضاء المتقطعة في منتصف الطريق
+    const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    if (isHorizontal) {
+        for (let sx = x - w/2 + 20; sx < x + w/2 - 20; sx += 35) {
+            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(16, 0.8), stripeMat);
+            stripe.rotation.x = -Math.PI / 2;
+            stripe.position.set(sx, 0.06, z);
+            scene.add(stripe);
+        }
+    } else {
+        for (let sz = z - l/2 + 20; sz < z + l/2 - 20; sz += 35) {
+            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 16), stripeMat);
+            stripe.rotation.x = -Math.PI / 2;
+            stripe.position.set(x, 0.06, sz);
+            scene.add(stripe);
+        }
+    }
+}
+// الطريق الوطني الساحلي الرئيسي (بطول 3200 متر)
+createRoad(0, 0, 3200, 32, true);
+// طرق فرعية للأحياء والولايات
+createRoad(-950, 250, 24, 500, false);
+createRoad(-350, 250, 24, 500, false);
+createRoad(450, 250, 24, 500, false);
+createRoad(1100, 250, 24, 500, false);
+
+// أشجار وأعمدة إنارة على طول الطريق
+function createTree(x, z) {
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 4, 8), new THREE.MeshStandardMaterial({ color: 0x6d4c41 }));
+    trunk.position.y = 2; tree.add(trunk);
+    const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(2.8, 1), new THREE.MeshStandardMaterial({ color: 0x27ae60 }));
+    leaves.position.y = 5.2; leaves.castShadow = true; tree.add(leaves);
+    tree.position.set(x, 0, z);
+    scene.add(tree);
+}
+for (let tx = -1400; tx <= 1400; tx += 110) {
+    createTree(tx, -24);
+    createTree(tx + 55, 24);
+}
+
+// المباني والمعالم الجزائرية الكبرى
+function createDetailedBuilding(x, z, w, h, d, wallCol, roofCol, signColor = null) {
+    const bGroup = new THREE.Group();
+    const walls = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color: wallCol, roughness: 0.5 })
+    );
+    walls.position.y = h / 2; walls.castShadow = true; walls.receiveShadow = true;
+    bGroup.add(walls);
+
+    const roof = new THREE.Mesh(
+        new THREE.BoxGeometry(w + 1, 1.2, d + 1),
+        new THREE.MeshStandardMaterial({ color: roofCol, roughness: 0.7 })
+    );
+    roof.position.y = h + 0.6;
+    bGroup.add(roof);
+
+    // نوافذ مضيئة
+    const winMat = new THREE.MeshStandardMaterial({ color: 0x74b9ff, emissive: 0x0984e3, emissiveIntensity: 0.3 });
+    for (let wy = 4; wy < h - 3; wy += 5) {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(w - 4, 2.2, d + 0.3), winMat);
+        win.position.y = wy;
+        bGroup.add(win);
+    }
+
+    if (signColor) {
+        const sign = new THREE.Mesh(
+            new THREE.BoxGeometry(w * 0.7, 2.5, 0.6),
+            new THREE.MeshStandardMaterial({ color: signColor, emissive: signColor, emissiveIntensity: 0.5 })
+        );
+        sign.position.set(0, h - 2, -d/2 - 0.3);
+        bGroup.add(sign);
+    }
+
+    bGroup.position.set(x, 0, z);
+    scene.add(bGroup);
+}
+
+// 1. المسجد الكبير بمئذنة وقبة ذهبية
+createDetailedBuilding(-1150, 42, 42, 22, 34, 0xffffff, 0x006233);
+const minaret = new THREE.Mesh(new THREE.CylinderGeometry(2, 2.6, 52, 16), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+minaret.position.set(-1125, 26, 25); scene.add(minaret);
+const dome = new THREE.Mesh(new THREE.SphereGeometry(10, 24, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.7, roughness: 0.2 }));
+dome.position.set(-1150, 22, 42); scene.add(dome);
+
+// 2. منزل العائلة
+createDetailedBuilding(-950, 38, 30, 16, 24, 0xf5f6fa, 0xd63031);
+// 3. سوبيرات عمي سليم
+createDetailedBuilding(-780, 36, 28, 14, 22, 0xffeaa7, 0xe17055, 0xe67e22);
+// 4. ساحة الأصدقاء
+createDetailedBuilding(-600, 40, 34, 18, 26, 0xdfe6e9, 0x00b894);
+// 5. معرض Geely الفخم
+createDetailedBuilding(-350, 45, 48, 24, 34, 0x1e272e, 0x00cec9, 0x00f5d4);
+// 6. ورشة الميكانيكي عمي مولود
+createDetailedBuilding(-120, 38, 34, 16, 26, 0x636e72, 0x2d3436, 0xf1c40f);
+// 7. الجزائر العاصمة + مقام الشهيد
+createDetailedBuilding(350, 50, 40, 36, 30, 0xf1f2f6, 0x2f3542);
+for (let i = 0; i < 3; i++) {
+    const angle = (i * Math.PI * 2) / 3;
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(3, 55, 8), new THREE.MeshStandardMaterial({ color: 0xecf0f1 }));
+    leaf.position.set(450 + Math.cos(angle)*6, 27, 45 + Math.sin(angle)*6);
+    leaf.rotation.y = -angle;
+    leaf.rotation.z = 0.18;
+    scene.add(leaf);
+}
+// 8. ولاية جيجل الساحلية
+createDetailedBuilding(1100, 44, 38, 26, 28, 0xfad390, 0xe55039, 0x00f5d4);
+
+// --- تصميم شخصيات احترافية بمفاصل وحركة مشي (Rockstar Character Rig) ---
+function createRockstarCharacter(skinHex, shirtHex, pantsHex, hairHex = 0x1e272e, isPlayer = false) {
+    const root = new THREE.Group();
+
+    const skinMat = new THREE.MeshStandardMaterial({ color: skinHex, roughness: 0.45 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: shirtHex, roughness: 0.6 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: pantsHex, roughness: 0.7 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: hairHex, roughness: 0.8 });
+
+    if (isPlayer) {
+        playerMaterials.shirt = shirtMat;
+        playerMaterials.pants = pantsMat;
+    }
+
+    // الحوض
+    const pelvis = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.22, 0.28), pantsMat);
+    pelvis.position.y = 0.95; pelvis.castShadow = true;
+    root.add(pelvis);
+
+    // الجذع العلوي (الصدر والكتفين)
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.68, 0.3), shirtMat);
+    torso.position.y = 1.38; torso.castShadow = true;
+    root.add(torso);
+
+    // الرقبة والرأس والشعر والعيون
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.14, 12), skinMat);
+    neck.position.y = 1.78;
+    root.add(neck);
+
+    const headGroup = new THREE.Group();
+    headGroup.position.y = 2.02;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 24), skinMat);
+    head.scale.set(0.92, 1.08, 0.96); head.castShadow = true;
+    headGroup.add(head);
+
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.23, 24, 16, 0, Math.PI*2, 0, Math.PI*0.55), hairMat);
+    hair.position.y = 0.03; hair.rotation.x = -0.15;
+    headGroup.add(hair);
+
+    // العيون (تحدد اتجاه النظر للأمام +Z)
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), eyeMat);
+    eyeL.position.set(-0.07, 0.02, 0.2); headGroup.add(eyeL);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), eyeMat);
+    eyeR.position.set(0.07, 0.02, 0.2); headGroup.add(eyeR);
+
+    root.add(headGroup);
+
+    // مفاصل الأذرع (لتحريكها أثناء المشي)
+    function makeArm(side) {
+        const pivot = new THREE.Group();
+        pivot.position.set(side * 0.34, 1.66, 0);
+        const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.085, 0.28, 12), shirtMat);
+        sleeve.position.y = -0.14; pivot.add(sleeve);
+        const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.34, 12), skinMat);
+        forearm.position.y = -0.44; pivot.add(forearm);
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 10), skinMat);
+        hand.position.y = -0.63; pivot.add(hand);
+        root.add(pivot);
+        return pivot;
+    }
+    const leftArm = makeArm(-1);
+    const rightArm = makeArm(1);
+
+    // مفاصل الأرجل (لتحريكها أثناء المشي)
+    function makeLeg(side) {
+        const pivot = new THREE.Group();
+        pivot.position.set(side * 0.14, 0.9, 0);
+        const legMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.085, 0.8, 12), pantsMat);
+        legMesh.position.y = -0.4; legMesh.castShadow = true; pivot.add(legMesh);
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.28), shoeMat);
+        shoe.position.set(0, -0.84, 0.04); pivot.add(shoe);
+        root.add(pivot);
+        return pivot;
+    }
+    const leftLeg = makeLeg(-1);
+    const rightLeg = makeLeg(1);
+
+    return { mesh: root, leftArm, rightArm, leftLeg, rightLeg, walkPhase: 0 };
+}
+
+const player = createRockstarCharacter(0xdba67b, selectedShirtColor, selectedPantsColor, 0x111111, true);
+player.mesh.position.set(-1150, 0, 16);
+scene.add(player.mesh);
+
+// الشخصيات التفاعلية الـ 10 موزعة على الخريطة الضخمة
+const npcs = [
+    { id: "imam", name: "الإمام (المسجد الكبير)", x: -1150, z: 22, shirt: 0xffffff, pants: 0xf5f6fa, lines: ["تقبل الله صلاتك يا سفيان! بارك الله فيك.", "اخرج الآن للقاء والدك محمد عند مدخل الحومة."] },
+    { id: "father", name: "الوالد محمد", x: -1020, z: 18, shirt: 0x2c3e50, pants: 0x1e272e, lines: ["صباح الخير يا وليدي. أمك في الدار تنتظرك لقضاء مستلزمات البيت."] },
+    { id: "mother", name: "الوالدة الكريمة", x: -950, z: 22, shirt: 0x8e44ad, pants: 0x2c3e50, lines: ["ربي يحفظك يا سفيان! تفضل 2,500 دج، اذهب إلى سوبيرات عمي سليم."] },
+    { id: "shopkeeper", name: "عمي سليم (مول السوبيرات)", x: -780, z: 20, shirt: 0xe67e22, pants: 0x2d3436, lines: ["مرحباً سفيان! القفة جاهزة بـ 1,200 دج. أصدقاؤك محمد وإياد ينتظرونك شرقاً!"] },
+    { id: "friends", name: "الصديقان محمد وإياد", x: -600, z: 20, shirt: 0x0984e3, pants: 0x1e272e, lines: ["إياد: وصلت في الوقت المناسب! معرض Geely Coolray فتح أبوابه.", "محمد: هيا نلقي نظرة، لكن اسمع نصيحة عمي جمال أولاً!"] },
+    { id: "uncle_djamal", name: "عمي جمال", x: -460, z: 18, shirt: 0x636e72, pants: 0x2d3436, lines: ["يا سفيان، السيارات الصينية جديدة، فكر جيداً قبل الشراء، لكن القرار قرارك!"] },
+    { id: "dealer", name: "مدير معرض Geely", x: -350, z: 22, shirt: 0x00cec9, pants: 0x1e272e, lines: ["أهلاً بك! Geely Coolray الرياضية الفخمة بـ 4,200,000 دج. مبروك عليك المفتاح!"] },
+    { id: "mechanic", name: "عمي مولود (الميكانيكي)", x: -120, z: 20, shirt: 0xd35400, pants: 0x2f3640, lines: ["ما شاء الله، محرك تيربو جبار! قمت بضبط كل شيء بـ 10,000 دج. انطلق للعاصمة!"] },
+    { id: "rabah", name: "عمو رابح (العاصمة)", x: 350, z: 22, shirt: 0x27ae60, pants: 0x1e272e, lines: ["تحفة حقيقية! خذ هذا الطرد المستعجل وسلمه لعمي الطاهر في ولاية جيجل شرقاً."] },
+    { id: "tahar", name: "عمي الطاهر (ولاية جيجل)", x: 1100, z: 22, shirt: 0xf1c40f, pants: 0x2c3e50, lines: ["أهلاً بك في جيجل الجوهرة! وصلت في وقت قياسي. تفضل مكافأتك: 500,000 دج!"] }
+];
+
+npcs.forEach(n => {
+    const obj = createRockstarCharacter(0xd2996c, n.shirt, n.pants);
+    obj.mesh.position.set(n.x, 0, n.z);
+    obj.mesh.rotation.y = Math.PI; // ينظر نحو الطريق
+    scene.add(obj.mesh);
+    n.char = obj;
+});
+
+// --- سيارة Geely Coolray مجسمة بالكامل ---
+const cars = [];
+function createCoolrayCar(name, x, z, col) {
+    const carGroup = new THREE.Group();
+    
+    const paintMat = new THREE.MeshStandardMaterial({ color: col, metalness: 0.85, roughness: 0.15 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x0a0f18, metalness: 0.95, roughness: 0.05 });
+    const trimMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
+
+    // الهيكل السفلي الرياضي
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.75, 5.0), paintMat);
+    chassis.position.y = 0.65; chassis.castShadow = true;
+    carGroup.add(chassis);
+
+    // المقصورة العلوية والزجاج
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.65, 2.5), glassMat);
+    cabin.position.set(0, 1.32, -0.25); cabin.castShadow = true;
+    carGroup.add(cabin);
+
+    // سقف السيارة بلون الهيكل
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.08, 2.3), paintMat);
+    roof.position.set(0, 1.66, -0.25);
+    carGroup.add(roof);
+
+    // المصابيح الأمامية LED (+Z هو الأمام)
+    const headLightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const hlL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.1), headLightMat);
+    hlL.position.set(-0.75, 0.75, 2.51); carGroup.add(hlL);
+    const hlR = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.1), headLightMat);
+    hlR.position.set(0.75, 0.75, 2.51); carGroup.add(hlR);
+
+    // الشبك الأمامي الرياضي
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.35, 0.1), trimMat);
+    grille.position.set(0, 0.62, 2.51); carGroup.add(grille);
+
+    // المصابيح الخلفية الحمراء (-Z هو الخلف)
+    const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const tl = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.18, 0.1), tailLightMat);
+    tl.position.set(0, 0.85, -2.51); carGroup.add(tl);
+
+    // العجلات الـ 4 مع جنوط معدنية
+    const wheels = [];
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.85 });
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.9, roughness: 0.2 });
+    const tireGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.32, 20);
+    const rimGeo = new THREE.CylinderGeometry(0.26, 0.26, 0.34, 12);
+
+    const wPos = [[-1.18, 0.42, 1.55], [1.18, 0.42, 1.55], [-1.18, 0.42, -1.55], [1.18, 0.42, -1.55]];
+    wPos.forEach(p => {
+        const wGroup = new THREE.Group();
+        const tire = new THREE.Mesh(tireGeo, tireMat); tire.rotation.z = Math.PI / 2; wGroup.add(tire);
+        const rim = new THREE.Mesh(rimGeo, rimMat); rim.rotation.z = Math.PI / 2; wGroup.add(rim);
+        wGroup.position.set(p[0], p[1], p[2]);
+        carGroup.add(wGroup);
+        wheels.push(wGroup);
+    });
+
+    carGroup.position.set(x, 0, z);
+    carGroup.rotation.y = Math.PI / 2; // موجهة شرقاً نحو الطريق
+    scene.add(carGroup);
+    cars.push({ name, mesh: carGroup, wheels, speed: 0, maxSpeed: 2.6, nitro: false });
+}
+createCoolrayCar("Geely Coolray GT", -340, -6, 0xe74c3c);
+createCoolrayCar("Geely Coolray Black", 360, -6, 0x2c3e50);
+
+// --- نظام التحكم الموحد (عصا تحكم باللمس + كيبورد) ---
+const input = { x: 0, y: 0 }; // x: يمين/يسار (-1 إلى 1), y: أمام/خلف (-1 إلى 1)
+const keyState = {};
+
+window.addEventListener('keydown', e => {
+    keyState[e.code] = true;
+    if (e.code === 'KeyF') toggleCar();
+    if (e.code === 'KeyE') interactNPC();
+    if (e.code === 'KeyH') playHorn();
+    if (e.code === 'ShiftLeft') toggleNitro();
+});
+window.addEventListener('keyup', e => { keyState[e.code] = false; });
+
+// عصا التحكم الافتراضية 360 درجة
+const joyZone = document.getElementById('joystick-zone');
+const joyKnob = document.getElementById('joystick-knob');
+let joyActive = false;
+
+function handleJoystick(clientX, clientY) {
+    const rect = joyZone.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const maxDist = rect.width / 2 - 20;
+
+    let dx = clientX - centerX;
+    let dy = clientY - centerY;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > maxDist) {
+        dx = (dx / dist) * maxDist;
+        dy = (dy / dist) * maxDist;
+    }
+
+    joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    input.x = dx / maxDist;
+    input.y = -dy / maxDist; // للأعلى موجب
+}
+
+joyZone.addEventListener('touchstart', e => { e.preventDefault(); joyActive = true; handleJoystick(e.touches[0].clientX, e.touches[0].clientY); });
+joyZone.addEventListener('touchmove', e => { e.preventDefault(); if (joyActive) handleJoystick(e.touches[0].clientX, e.touches[0].clientY); });
+joyZone.addEventListener('touchend', e => { e.preventDefault(); joyActive = false; joyKnob.style.transform = 'translate(0px, 0px)'; input.x = 0; input.y = 0; });
+
+// --- نظام المهام والحوارات ---
+let money = 6000000;
+let missionStep = 1;
+let activeCar = null;
+let dialogueOpen = false;
+
+function showToast(txt) {
+    const t = document.getElementById('toast');
+    t.innerText = txt; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3200);
+}
+
+function updateStats() {
+    document.getElementById('money').innerText = money.toLocaleString();
+}
+
+function toggleNitro() {
+    if (!activeCar) return;
+    activeCar.nitro = !activeCar.nitro;
+    showToast(activeCar.nitro ? "🔥 تم تفعيل التيربو الرياضي!" : "تم إيقاف التيربو");
+    playSound(520, 'sawtooth', 0.15);
+}
+
+function advanceMission(npcId) {
+    const steps = {
+        "imam": { req: 1, next: 2, title: "الفصل 2 / 14: لقاء الوالد محمد", desc: "تحدث مع الوالد محمد شرق المسجد [□]", toast: "🤲 تقبل الله صلاتك! توجه للقاء والدك" },
+        "father": { req: 2, next: 3, title: "الفصل 3 / 14: في منزل العائلة", desc: "اذهب للدار وتحدث مع الوالدة [□]", toast: "👨‍👦 توجه إلى منزل العائلة" },
+        "mother": { req: 3, next: 4, money: 2500, title: "الفصل 4 / 14: سوبيرات عمي سليم", desc: "اشترِ المستلزمات من عمي سليم [□]", toast: "💵 استلمت 2,500 دج من الوالدة" },
+        "shopkeeper": { req: 4, next: 5, money: -1200, title: "الفصل 5 / 14: لقاء محمد وإياد", desc: "التقِ بصديقيك محمد وإياد شرقاً [□]", toast: "🛒 اشتريت القفة بنجاح!" },
+        "friends": { req: 5, next: 6, title: "الفصل 6 / 14: نصيحة عمي جمال", desc: "استمع لرأي عمي جمال حول السيارات [□]", toast: "👥 توجه لاستشارة عمي جمال" },
+        "uncle_djamal": { req: 6, next: 7, title: "الفصل 7 / 14: معرض Geely", desc: "اذهب للمعرض لشراء Geely Coolray [□]", toast: "🏢 معرض Geely ينتظرك!" },
+        "dealer": { req: 7, next: 8, money: -4200000, title: "الفصل 8 / 14: ورشة الميكانيكي", desc: "اركب الكولراي [✕] وتوجه لعمي مولود [□]", toast: "🚗 مبروك عليك Geely Coolray!" },
+        "mechanic": { req: 8, next: 9, money: -10000, title: "الفصل 9 / 14: الجزائر العاصمة", desc: "سافر بالسيارة شرقاً نحو عمو رابح بالعاصمة [□]", toast: "🔧 تم فحص السيارة بنجاح!" },
+        "rabah": { req: 9, next: 10, money: 100000, title: "الفصل 10 / 14: الطريق إلى جيجل", desc: "انطلق عبر الطريق الساحلي إلى عمي الطاهر بجيجل [□]", toast: "📦 استلمت الطرد + 100,000 دج" },
+        "tahar": { req: 10, next: 11, money: 500000, title: "🏆 أتممت الملحمة بنجاح!", desc: "استمتع بالحرية المطلقة في عالم GTA Algeria!", toast: "🎉 مبروك! حصلت على مكافأة 500,000 دج!" }
+    };
+
+    const s = steps[npcId];
+    if (s && missionStep === s.req) {
+        missionStep = s.next;
+        if (s.money) { money += s.money; updateStats(); }
+        document.getElementById('mission-title').innerText = s.title;
+        document.getElementById('mission-desc').innerText = s.desc;
+        showToast(s.toast);
+    }
+}
+
+function toggleCar() {
+    if (activeCar) {
+        player.mesh.visible = true;
+        const exitOffset = new THREE.Vector3(2.4, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), activeCar.mesh.rotation.y);
+        player.mesh.position.copy(activeCar.mesh.position).add(exitOffset);
+        activeCar.speed = 0;
+        activeCar = null;
+    } else {
+        let closest = null, minD = 7;
+        cars.forEach(c => {
+            const d = player.mesh.position.distanceTo(c.mesh.position);
+            if (d < minD) { minD = d; closest = c; }
+        });
+        if (closest) {
+            activeCar = closest;
+            player.mesh.visible = false;
+            playSound(180, 'sawtooth', 0.18);
+        }
+    }
+}
+
+function closeDialogue() {
+    document.getElementById('dialogue-box').style.display = 'none';
+    dialogueOpen = false;
+}
+
+function interactNPC() {
+    if (dialogueOpen) { closeDialogue(); return; }
+    const pos = activeCar ? activeCar.mesh.position : player.mesh.position;
+    npcs.forEach(n => {
+        if (pos.distanceTo(n.char.mesh.position) < 8.5) {
+            document.getElementById('npc-title').innerText = n.name;
+            document.getElementById('npc-msg').innerText = n.lines.join(" ");
+            document.getElementById('dialogue-box').style.display = 'block';
+            dialogueOpen = true;
+            playSound(450, 'sine', 0.12);
+            advanceMission(n.id);
+        }
+    });
+}
+
+// --- تحديث الرادار والمناطق ---
+const radarCanvas = document.getElementById('radar');
+const rCtx = radarCanvas.getContext('2d');
+function updateRadarAndZone(pos) {
+    rCtx.clearRect(0, 0, 115, 75);
+    // البحر
+    rCtx.fillStyle = "#0984e3"; rCtx.fillRect(0, 0, 115, 22);
+    // الشاطئ
+    rCtx.fillStyle = "#f6e58d"; rCtx.fillRect(0, 22, 115, 5);
+    // الأرض
+    rCtx.fillStyle = "#27ae60"; rCtx.fillRect(0, 27, 115, 48);
+    // الطريق
+    rCtx.fillStyle = "#2d3436"; rCtx.fillRect(0, 36, 115, 6);
+
+    const mapX = (x) => ((x + 1400) / 2800) * 115;
+    const mapZ = (z) => 39 + (z / 400) * 35;
+
+    // نقاط الشخصيات والمهام
+    npcs.forEach(n => {
+        rCtx.fillStyle = "#f1c40f";
+        rCtx.fillRect(mapX(n.x) - 1.5, mapZ(n.z) - 1.5, 3, 3);
+    });
+
+    // موقع اللاعب
+    rCtx.fillStyle = "#ff3f34";
+    rCtx.beginPath(); rCtx.arc(mapX(pos.x), mapZ(pos.z), 3.5, 0, Math.PI * 2); rCtx.fill();
+
+    // اسم المنطقة الحالية
+    let zone = "الطريق الساحلي";
+    if (pos.x < -850) zone = "الحي والمسجد";
+    else if (pos.x < -200) zone = "منطقة المعارض";
+    else if (pos.x > 200 && pos.x < 650) zone = "الجزائر العاصمة";
+    else if (pos.x >= 850) zone = "ولاية جيجل 🇩🇿";
+
+    document.getElementById('city-name').innerText = zone;
+    document.getElementById('zone-radar').innerText = zone;
+}
+
+// --- حلقة المحرك والفيزياء ---
+function animate() {
+    requestAnimationFrame(animate);
+
+    // دمج مدخلات الكيبورد مع عصا التحكم
+    let moveX = input.x;
+    let moveY = input.y;
+    if (keyState['ArrowLeft'] || keyState['KeyA']) moveX = -1;
+    if (keyState['ArrowRight'] || keyState['KeyD']) moveX = 1;
+    if (keyState['ArrowUp'] || keyState['KeyW']) moveY = 1;
+    if (keyState['ArrowDown'] || keyState['KeyS']) moveY = -1;
+
+    if (gameStarted && !dialogueOpen) {
+        if (activeCar) {
+            const topSpeed = activeCar.nitro ? activeCar.maxSpeed * 1.45 : activeCar.maxSpeed;
+            if (Math.abs(moveY) > 0.1) {
+                activeCar.speed += moveY * 0.065;
+                activeCar.speed = Math.max(-0.9, Math.min(topSpeed, activeCar.speed));
+            } else {
+                activeCar.speed *= 0.96;
+            }
+
+            if (Math.abs(activeCar.speed) > 0.03 && Math.abs(moveX) > 0.1) {
+                const dir = activeCar.speed > 0 ? 1 : -1;
+                activeCar.mesh.rotation.y -= moveX * 0.045 * dir;
+            }
+
+            activeCar.mesh.position.x += Math.sin(activeCar.mesh.rotation.y) * activeCar.speed;
+            activeCar.mesh.position.z += Math.cos(activeCar.mesh.rotation.y) * activeCar.speed;
+            player.mesh.position.copy(activeCar.mesh.position);
+
+            // تدوير العجلات
+            activeCar.wheels.forEach(w => { w.rotation.x += activeCar.speed * 0.45; });
+            document.getElementById('speed-hud').innerText = Math.round(Math.abs(activeCar.speed) * 95);
+        } else {
+            document.getElementById('speed-hud').innerText = "0";
+            const mag = Math.hypot(moveX, moveY);
+            if (mag > 0.12) {
+                const walkSpeed = 0.34;
+                if (Math.abs(moveX) > 0.1) player.mesh.rotation.y -= moveX * 0.065;
+                const forward = moveY * walkSpeed;
+                player.mesh.position.x += Math.sin(player.mesh.rotation.y) * forward;
+                player.mesh.position.z += Math.cos(player.mesh.rotation.y) * forward;
+
+                // تحريك المفاصل (المشي الواقعي)
+                player.walkPhase += 0.22;
+                const swing = Math.sin(player.walkPhase) * 0.65;
+                player.leftLeg.rotation.x = swing;
+                player.rightLeg.rotation.x = -swing;
+                player.leftArm.rotation.x = -swing * 0.7;
+                player.rightArm.rotation.x = swing * 0.7;
+            } else {
+                // العودة لوضعية الوقوف
+                player.leftLeg.rotation.x *= 0.8;
+                player.rightLeg.rotation.x *= 0.8;
+                player.leftArm.rotation.x *= 0.8;
+                player.rightArm.rotation.x *= 0.8;
+            }
+        }
+    }
+
+    const pos = activeCar ? activeCar.mesh.position : player.mesh.position;
+    updateRadarAndZone(pos);
+
+    // إظهار إشعار القرب
+    let nearText = "";
+    npcs.forEach(n => {
+        if (pos.distanceTo(n.char.mesh.position) < 8) nearText = `اضغط [□] للتحدث مع ${n.name}`;
+    });
+    if (!activeCar && !nearText) {
+        cars.forEach(c => {
+            if (pos.distanceTo(c.mesh.position) < 6.5) nearText = `اضغط [✕] لركوب ${c.name}`;
+        });
+    }
+    const promptEl = document.getElementById('prompt');
+    if (nearText && gameStarted && !dialogueOpen) {
+        promptEl.innerText = nearText; promptEl.style.display = 'block';
+    } else {
+        promptEl.style.display = 'none';
+    }
+
+    // كاميرا سينمائية متزنة خلف الشخصية أو السيارة
+    const target = activeCar ? activeCar.mesh : player.mesh;
+    const dist = activeCar ? 13.5 : 7.5;
+    const height = activeCar ? 4.8 : 3.6;
+    const desiredCam = new THREE.Vector3(
+        target.position.x - Math.sin(target.rotation.y) * dist,
+        target.position.y + height,
+        target.position.z - Math.cos(target.rotation.y) * dist
+    );
+    camera.position.lerp(desiredCam, 0.14);
+    camera.lookAt(target.position.x, target.position.y + 1.8, target.position.z);
+
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate();
+</script>
+</body>
+</html>
